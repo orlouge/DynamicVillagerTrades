@@ -2,15 +2,16 @@ package io.github.orlouge.dynamicvillagertrades.trade_offers.generators;
 
 import io.github.orlouge.dynamicvillagertrades.trade_offers.TradeGroup;
 import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.village.VillagerProfession;
 
 import java.util.*;
 
 public abstract class Generator {
     public void reset() {}
-    public abstract Optional<Map<String, TradeGroup>> generate(VillagerProfession profession, DynamicRegistryManager registryManager);
+    public abstract Optional<Map<String, TradeGroup>> generate(RegistryEntry<VillagerProfession> profession, DynamicRegistryManager registryManager);
 
-    public static Optional<Map<String, TradeGroup>> generateAll(VillagerProfession profession, DynamicRegistryManager registryManager) {
+    public static Optional<Map<String, TradeGroup>> generateAll(RegistryEntry<VillagerProfession> profession, DynamicRegistryManager registryManager) {
         for (Generator generator : generators) {
             Optional<Map<String, TradeGroup>> trades = generator.generate(profession, registryManager);
             if (trades.isPresent()) {

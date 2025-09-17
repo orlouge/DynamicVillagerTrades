@@ -5,6 +5,9 @@ import io.github.orlouge.dynamicvillagertrades.trade_offers.EnchantSpecificBookF
 import io.github.orlouge.dynamicvillagertrades.trade_offers.SellSpecificPotionHoldingItemFactory;
 import net.minecraft.block.*;
 import net.minecraft.block.enums.NoteBlockInstrument;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.EquippableComponent;
+import net.minecraft.component.type.RepairableComponent;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.item.*;
@@ -15,6 +18,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.village.TradeOffers;
+import net.minecraft.village.VillagerType;
 import net.minecraft.world.gen.structure.Structure;
 
 import java.util.*;
@@ -94,6 +98,10 @@ public class AttributeUtils {
     }
 
     public static String generateTradeAttributeName(TradeOffers.Factory factory, String fallback) {
+        if (factory instanceof TradeOffers.TypedWrapperFactory wrapperfactory) {
+            Collection<TradeOffers.Factory> factories = ((TradeOffersAccessor.TypedWrapperFactoryAccessor) (Object) wrapperfactory).getTypeToFactory().values();
+            if (!factories.isEmpty()) return generateTradeAttributeName(factories.stream().findFirst().get(), fallback);
+        }
         if (factory instanceof TradeOffers.SellSuspiciousStewFactory stewfactory) {
             Optional<RegistryEntry<StatusEffect>> entry = ((TradeOffersAccessor.SellSuspiciousStewFactoryAccessor) stewfactory).getStewEffects().effects().stream().findFirst().map(e -> e.effect());
             if (entry.isPresent() && entry.get().getKey().isPresent()) return entry.get().getKey().get().getValue().getPath();
@@ -102,8 +110,7 @@ public class AttributeUtils {
             return "enchanted_book";
         }
         if (factory instanceof TradeOffers.SellMapFactory sellfactory) {
-            RegistryKey<? extends Registry<Structure>> key = ((TradeOffersAccessor.SellMapFactoryAccessor) sellfactory).getStructure().registry();
-            return key.getValue().getPath();
+            return ((TradeOffersAccessor.SellMapFactoryAccessor) sellfactory).getStructure().id().getPath();
         }
         if (factory instanceof EnchantSpecificBookFactory enchantfactory) {
             return enchantfactory.getEnchantmentType().getPath();
@@ -157,21 +164,8 @@ public class AttributeUtils {
         });
     }
 
-    public static Optional<ArmorMaterial> getArmorMaterial(Item item) {
-        if (item instanceof ArmorItem armorItem) return Optional.of(armorItem.getMaterial().value());
-        return Optional.empty();
-    }
-    public static Optional<ToolMaterial> getToolMaterial(Item item) {
-        if (item instanceof ToolItem toolItem) return Optional.of(toolItem.getMaterial());
-        return Optional.empty();
-    }
-
-    public static Optional<Item> getRepairItem(Ingredient ingredient) {
-        ItemStack[] matchingStacks = ingredient.getMatchingStacks();
-        if (matchingStacks.length > 0) {
-            return Optional.of(matchingStacks[0].getItem());
-        }
-        return Optional.empty();
+    public static Optional<Item> getRepairItem(Item item) {
+        return Optional.ofNullable(item.getComponents().get(DataComponentTypes.REPAIRABLE)).stream().flatMap(x -> x.items().stream().map(RegistryEntry::value)).findFirst();
     }
     public static Optional<String> getMod(Item item) {
         String namespace = Registries.ITEM.getId(item).getNamespace();
@@ -190,15 +184,11 @@ public class AttributeUtils {
     }
 
     public static Optional<String> getToolOrArmorMaterialName(Item item) {
-        return getArmorMaterial(item).map(Registries.ARMOR_MATERIAL::getEntry).flatMap(e -> e.getKey().map(k -> k.getValue().getPath())).or(() ->
-                getToolMaterial(item).map(ToolMaterial::getRepairIngredient).or(() ->
-                        getArmorMaterial(item).map(m -> m.repairIngredient().get())
-                ).flatMap(AttributeUtils::getRepairItem).flatMap(m -> getIngotMaterialName(m, true))
-        );
+        return AttributeUtils.getRepairItem(item).flatMap(m -> getIngotMaterialName(m, true));
     }
 
     public static Optional<EquipmentSlot> getArmorType(Item item) {
-        if (item instanceof ArmorItem armorItem) return Optional.of(armorItem.getSlotType());
+        if (item.getComponents().contains(DataComponentTypes.EQUIPPABLE)) return Optional.of(item.getComponents().get(DataComponentTypes.EQUIPPABLE).slot());
         return Optional.empty();
     }
 }

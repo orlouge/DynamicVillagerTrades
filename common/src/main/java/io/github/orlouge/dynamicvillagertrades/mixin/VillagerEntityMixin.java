@@ -10,6 +10,9 @@ import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.storage.ReadView;
+import net.minecraft.storage.WriteView;
+import net.minecraft.util.dynamic.Codecs;
 import net.minecraft.village.TradeOffer;
 import net.minecraft.village.TradeOfferList;
 import net.minecraft.village.VillagerData;
@@ -34,8 +37,9 @@ public abstract class VillagerEntityMixin extends MerchantEntity implements Exte
 
     private final Map<String, Double> attributes = new HashMap<>();
     private final Map<String, NbtCompound> extra_offer_data = new HashMap<>();
-    private static final String attributes_key = DynamicVillagerTradesMod.MOD_ID + "_attributes";
-    private static final String extra_offer_data_key = DynamicVillagerTradesMod.MOD_ID + "_extra_offer_data";
+    private static final String extra_data_key = DynamicVillagerTradesMod.MOD_ID + "_data";
+    private static final String attributes_key = "attributes";
+    private static final String extra_offer_data_key = "extra_offer_data";
 
     public VillagerEntityMixin(EntityType<? extends MerchantEntity> entityType, World world) {
         super(entityType, world);
@@ -53,30 +57,30 @@ public abstract class VillagerEntityMixin extends MerchantEntity implements Exte
     }
     */
 
-    @Inject(method = "readCustomDataFromNbt", at = @At("TAIL"))
-    public void loadAttributes(NbtCompound nbt, CallbackInfo info) {
-        readExtraData(nbt);
+    @Inject(method = "readCustomData", at = @At("TAIL"))
+    public void loadAttributes(ReadView view, CallbackInfo ci) {
+        view.read(extra_data_key, Codecs.NBT_ELEMENT).ifPresent(nbt -> readExtraData((NbtCompound) nbt));
     }
 
     private void readAttributes(NbtCompound nbt) {
-        nbt.getKeys().forEach(attr -> attributes.put(attr, nbt.getDouble(attr)));
+        nbt.getKeys().forEach(attr -> attributes.put(attr, nbt.getDouble(attr, 0)));
     }
 
     private void readExtraOfferData(NbtCompound nbt) {
         this.extra_offer_data.clear();
-        NbtCompound data_map = nbt.getCompound(extra_offer_data_key);
+        NbtCompound data_map = nbt.getCompound(extra_offer_data_key).get();
         data_map.getKeys().forEach(key -> {
-            this.extra_offer_data.put(key, data_map.getCompound(key));
+            this.extra_offer_data.put(key, data_map.getCompound(key).get());
         });
     }
 
     @Override
     public void readExtraData(NbtCompound nbt) {
         if (nbt.contains(attributes_key)) {
-            readAttributes(nbt.getCompound(attributes_key));
+            readAttributes(nbt.getCompound(attributes_key).get());
 
-            if (nbt.contains("Offers", 10)) {
-                loadExtendedOffers(nbt.getCompound("Offers"));
+            if (nbt.contains("Offers")) {
+                loadExtendedOffers(nbt.getCompound("Offers").get());
             }
         }
 
@@ -97,19 +101,21 @@ public abstract class VillagerEntityMixin extends MerchantEntity implements Exte
     }
 
     private void loadExtendedOffers(NbtCompound offers) {
-        NbtList recipes = offers.getList("Recipes", 10);
+        NbtList recipes = offers.getList("Recipes").get();
         TradeOfferList tradeOffers = new TradeOfferList();
 
         for (int i = 0; i < recipes.size(); ++i) {
-            tradeOffers.add(ExtendedTradeOffer.CODEC.parse(this.getRegistryManager().getOps(NbtOps.INSTANCE), recipes.getCompound(i)).getOrThrow());
+            tradeOffers.add(ExtendedTradeOffer.CODEC.parse(this.getRegistryManager().getOps(NbtOps.INSTANCE), recipes.getCompound(i).get()).getOrThrow());
         }
 
         this.offers = tradeOffers;
     }
 
-    @Inject(method = "writeCustomDataToNbt", at = @At("TAIL"))
-    private void saveAttributes(NbtCompound nbt, CallbackInfo info) {
+    @Inject(method = "writeCustomData", at = @At("TAIL"))
+    private void saveAttributes(WriteView view, CallbackInfo ci) {
+        NbtCompound nbt = new NbtCompound();
         this.writeExtraData(nbt);
+        view.put(extra_data_key, Codecs.NBT_ELEMENT, nbt);
     }
 
     @Inject(method = "fillRecipes", at = @At("HEAD"), cancellable = true)
@@ -143,13 +149,13 @@ public abstract class VillagerEntityMixin extends MerchantEntity implements Exte
     }
 
     private boolean refreshOffers() {
-        Optional<Collection<TradeGroup>> optoffers = DynamicVillagerTradesMod.TRADE_OFFER_MANAGER.getVillagerOffers(this.getVillagerData().getProfession(), this.getRegistryManager()).map(Map::values);
+        Optional<Collection<TradeGroup>> optoffers = DynamicVillagerTradesMod.TRADE_OFFER_MANAGER.getVillagerOffers(this.getVillagerData().profession(), this.getRegistryManager()).map(Map::values);
         optoffers.ifPresent(offerGroups -> {
             TradeOfferList offerList = this.getOffers();
             offerList.clear();
 
-            int level = this.getVillagerData().getLevel();
-            TradeGroup.TradeGroupSelector selector = new TradeGroup.TradeGroupSelector(offerGroups, level * 2, level * 2, level, this.attributes, this.random, new HashMap<>());
+            int level = this.getVillagerData().level();
+            TradeGroup.TradeGroupSelector selector = new TradeGroup.TradeGroupSelector(offerGroups, level * 2, level * 2, level, this.attributes, this.getVillagerData().type(), new HashMap<>(), this.random);
 
             HashMap<String, NbtCompound> new_data = new HashMap<>();
             selector.getSelectedTrades().forEach(tradeFactory -> {

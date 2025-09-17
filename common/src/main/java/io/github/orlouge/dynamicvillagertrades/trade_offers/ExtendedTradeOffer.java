@@ -5,17 +5,20 @@ import io.github.orlouge.dynamicvillagertrades.DynamicVillagerTradesMod;
 import io.github.orlouge.dynamicvillagertrades.TradeOfferManager;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.github.orlouge.dynamicvillagertrades.mixin.TradeOffersAccessor;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.village.TradeOffer;
 import net.minecraft.village.TradeOffers;
 import net.minecraft.village.TradedItem;
+import net.minecraft.village.VillagerType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -72,7 +75,7 @@ public class ExtendedTradeOffer extends TradeOffer {
 
         public ExtendedTradeOffer create(Entity entity, Random random, Optional<NbtCompound> data) {
             if (this.cache && this.key.isPresent() && data.map(d -> d.contains(cached_offer_key)).orElse(false)) {
-                DataResult<ExtendedTradeOffer> result = ExtendedTradeOffer.CODEC.parse(entity.getRegistryManager().getOps(NbtOps.INSTANCE), data.get().getCompound(cached_offer_key));
+                DataResult<ExtendedTradeOffer> result = ExtendedTradeOffer.CODEC.parse(entity.getRegistryManager().getOps(NbtOps.INSTANCE), data.get().getCompound(cached_offer_key).get());
                 if (result.isSuccess()) return result.getOrThrow();
             }
 
@@ -83,6 +86,13 @@ public class ExtendedTradeOffer extends TradeOffer {
         @Override
         public String toString() {
             return offer.toString();
+        }
+
+        public boolean valid(RegistryEntry<VillagerType> villagerType) {
+            if (offer instanceof TradeOffersAccessor.TypedWrapperFactoryAccessor wrapper) {
+                return wrapper.getTypeToFactory().containsKey(villagerType.getKey().get());
+            }
+            return true;
         }
     }
 

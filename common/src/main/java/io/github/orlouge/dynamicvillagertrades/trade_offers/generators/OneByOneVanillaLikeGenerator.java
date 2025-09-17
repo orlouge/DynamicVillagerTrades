@@ -3,13 +3,15 @@ package io.github.orlouge.dynamicvillagertrades.trade_offers.generators;
 import io.github.orlouge.dynamicvillagertrades.trade_offers.ExtendedTradeOffer;
 import io.github.orlouge.dynamicvillagertrades.trade_offers.TradeGroup;
 import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.village.TradeOffers;
+import net.minecraft.village.VillagerProfession;
 
 import java.util.*;
 
 public class OneByOneVanillaLikeGenerator extends VanillaLikeGenerator {
     @Override
-    protected boolean professionFilter(String profession) {
+    protected boolean professionFilter(RegistryKey<VillagerProfession> profession) {
         return true;
     }
 

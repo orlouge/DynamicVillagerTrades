@@ -4,6 +4,7 @@ import net.minecraft.block.*;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.DyeItem;
 import net.minecraft.item.Item;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.sound.BlockSoundGroup;
 import net.minecraft.village.TradeOffers;
 import net.minecraft.village.VillagerProfession;
@@ -12,8 +13,8 @@ import java.util.*;
 
 public class ShepherdGenerator extends OneByOneVanillaLikeGenerator {
     @Override
-    protected boolean professionFilter(String profession) {
-        return profession.equals(VillagerProfession.SHEPHERD.id());
+    protected boolean professionFilter(RegistryKey<VillagerProfession> profession) {
+        return profession.equals(VillagerProfession.SHEPHERD);
     }
 
     @Override

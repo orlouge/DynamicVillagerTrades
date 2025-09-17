@@ -4,8 +4,9 @@ import io.github.orlouge.dynamicvillagertrades.DynamicVillagerTradesMod;
 import io.github.orlouge.dynamicvillagertrades.WeightedRandomList;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.util.dynamic.Codecs;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.math.random.Random;
+import net.minecraft.village.VillagerType;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -73,42 +74,44 @@ public record TradeGroup(boolean replace, int minTrades, int maxTrades, double r
         private final WeightedRandomList<TradeGroup.TradeSelector> randomSelectors = new WeightedRandomList<>();
         private final int maxTrades;
         private final Optional<Double> weight;
+        private final RegistryEntry<VillagerType> villagerType;
         private final Random random;
         private final Set<String> selectedKeys;
         private static final double base_rate = 0.5;
 
-        public TradeGroupSelector(Collection<TradeSelector> allSelectors, int minTrades, int maxTrades, Optional<Double> weight, int merchantLevel, Map<String, Double> merchantAttributes, Random random, Set<String> selectedKeys) {
+        public TradeGroupSelector(Collection<TradeSelector> allSelectors, int minTrades, int maxTrades, Optional<Double> weight, int merchantLevel, Map<String, Double> merchantAttributes, RegistryEntry<VillagerType> villagerType, Random random, Set<String> selectedKeys) {
             this.allSelectors = allSelectors;
             this.random = random;
             this.weight = weight;
             this.maxTrades = maxTrades;
             this.selectedKeys = selectedKeys;
+            this.villagerType = villagerType;
             allSelectors.forEach(selector -> { if (selector.canSelect()) this.randomSelectors.add(selector.getWeight(), selector);});
             selectN(minTrades);
         }
 
-        public TradeGroupSelector(TradeGroup group, int merchantLevel, Map<String, Double> merchantAttributes, Random random, HashMap<String, HashSet<String>> uniqueKeySets) {
+        public TradeGroupSelector(TradeGroup group, int merchantLevel, Map<String, Double> merchantAttributes, RegistryEntry<VillagerType> villagerType, Random random, HashMap<String, HashSet<String>> uniqueKeySets) {
             this(
                     Stream.concat(
-                        group.offers().stream().map(offer -> new SingleTradeOfferSelector(offer, base_rate, group.randomness() * DynamicVillagerTradesMod.GLOBAL_RANDOMNESS, merchantLevel, merchantAttributes)),
-                        new TreeMap<>(group.subGroups().orElse(Collections.emptyMap())).values().stream().map(subgroup -> new TradeGroupSelector(subgroup, merchantLevel, merchantAttributes, random, uniqueKeySets))
+                        group.offers().stream().map(offer -> new SingleTradeOfferSelector(offer, base_rate, group.randomness() * DynamicVillagerTradesMod.GLOBAL_RANDOMNESS, merchantLevel, merchantAttributes, villagerType)),
+                        new TreeMap<>(group.subGroups().orElse(Collections.emptyMap())).values().stream().map(subgroup -> new TradeGroupSelector(subgroup, merchantLevel, merchantAttributes, villagerType, random, uniqueKeySets))
                     ).collect(Collectors.toList()),
                     group.minTrades, group.maxTrades,
                     group.affinity().map(affinities -> weightFunction(merchantAttributes, affinities, 1, base_rate)),
-                    merchantLevel, merchantAttributes, random,
+                    merchantLevel, merchantAttributes, villagerType, random,
                     group.uniqueKeySet.map(s -> uniqueKeySets.computeIfAbsent(s, s2 -> new HashSet<>())).orElse(null)
             );
         }
 
-        public TradeGroupSelector(Collection<TradeGroup> groups, Optional<Double> weight, int minTrades, int maxTrades, int merchantLevel, Map<String, Double> merchantAttributes, Random random, HashMap<String, HashSet<String>> uniqueKeySets) {
+        public TradeGroupSelector(Collection<TradeGroup> groups, Optional<Double> weight, int minTrades, int maxTrades, int merchantLevel, Map<String, Double> merchantAttributes, RegistryEntry<VillagerType> villagerType, Random random, HashMap<String, HashSet<String>> uniqueKeySets) {
             this(
-                    groups.stream().map(group -> new TradeGroupSelector(group, merchantLevel, merchantAttributes, random, uniqueKeySets)).collect(Collectors.toList()),
-                    minTrades, maxTrades, weight, merchantLevel, merchantAttributes, random, null
+                    groups.stream().map(group -> new TradeGroupSelector(group, merchantLevel, merchantAttributes, villagerType, random, uniqueKeySets)).collect(Collectors.toList()),
+                    minTrades, maxTrades, weight, merchantLevel, merchantAttributes, villagerType, random, null
             );
         }
 
-        public TradeGroupSelector(Collection<TradeGroup> groups, int minTrades, int maxTrades, int merchantLevel, Map<String, Double> merchantAttributes, Random random, HashMap<String, HashSet<String>> uniqueKeySets) {
-            this(groups, Optional.empty(), minTrades, maxTrades, merchantLevel, merchantAttributes, random, uniqueKeySets);
+        public TradeGroupSelector(Collection<TradeGroup> groups, int minTrades, int maxTrades, int merchantLevel, Map<String, Double> merchantAttributes, RegistryEntry<VillagerType> villagerType, HashMap<String, HashSet<String>> uniqueKeySets, Random random) {
+            this(groups, Optional.empty(), minTrades, maxTrades, merchantLevel, merchantAttributes, villagerType, random, uniqueKeySets);
         }
 
         @Override
@@ -157,10 +160,12 @@ public record TradeGroup(boolean replace, int minTrades, int maxTrades, double r
         private final Double weight;
         private boolean invalid;
         private boolean selected = false;
+        private final RegistryEntry<VillagerType> villagerType;
 
-        public SingleTradeOfferSelector(ExtendedTradeOffer.Factory offer, double base_rate, double randomness, int merchantLevel, Map<String, Double> merchantAttributes) {
+        public SingleTradeOfferSelector(ExtendedTradeOffer.Factory offer, double base_rate, double randomness, int merchantLevel, Map<String, Double> merchantAttributes, RegistryEntry<VillagerType> villagerType) {
             this.offer = offer;
             final Double[] maxValue = new Double[1];
+            this.villagerType = villagerType;
             offer.affinity().ifPresentOrElse(
                     aff -> {
                         maxValue[0] = 1.0;
@@ -174,7 +179,7 @@ public record TradeGroup(boolean replace, int minTrades, int maxTrades, double r
                     }
             );
             this.weight = weightFunction(merchantAttributes, offer.affinity().orElse(offer.attributes()), maxValue[0], base_rate / randomness);
-            this.invalid = offer.level() > merchantLevel;
+            this.invalid = offer.level() > merchantLevel || !offer.valid(villagerType);
         }
 
         @Override

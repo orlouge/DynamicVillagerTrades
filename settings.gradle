@@ -11,4 +11,3 @@ rootProject.name = 'dynamicvillagertrades'
 
 include 'common'
 include 'fabric'
-include 'neoforge'

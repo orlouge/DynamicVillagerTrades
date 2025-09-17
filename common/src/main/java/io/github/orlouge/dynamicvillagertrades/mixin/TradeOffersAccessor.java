@@ -39,6 +39,12 @@ public interface TradeOffersAccessor {
         int getExperience();
     }
 
+    @Mixin(TradeOffers.TypedWrapperFactory.class)
+    interface TypedWrapperFactoryAccessor {
+        @Accessor
+        Map<RegistryKey<VillagerType>, TradeOffers.Factory> getTypeToFactory();
+    }
+
     @Mixin(TradeOffers.SellItemFactory.class)
     interface SellItemFactoryAccessor {
 
@@ -116,7 +122,7 @@ public interface TradeOffersAccessor {
     interface TypeAwareBuyForOneEmeraldFactoryAccessor {
 
         @Accessor
-        Map<VillagerType, Item> getMap();
+        Map<RegistryKey<VillagerType>, Item> getMap();
 
         @Accessor
         int getCount();

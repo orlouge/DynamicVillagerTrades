@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import io.github.orlouge.dynamicvillagertrades.api.CodecHelper;
 import io.github.orlouge.dynamicvillagertrades.api.SerializableTradeOfferFactory;
+import net.minecraft.registry.RegistryKey;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.entity.Entity;
@@ -16,7 +17,7 @@ import net.minecraft.village.VillagerType;
 import java.util.Map;
 import java.util.function.Supplier;
 
-public record TypeAwareTradeOfferFactory(Map<VillagerType, TradeOffers.Factory> tradeOffers) implements SerializableTradeOfferFactory {
+public record TypeAwareTradeOfferFactory(Map<RegistryKey<VillagerType>, TradeOffers.Factory> tradeOffers) implements SerializableTradeOfferFactory {
     public static final MapCodec<TypeAwareTradeOfferFactory> CODEC = CodecHelper.villagerTypeMap(TradeOfferFactoryType.CODEC).fieldOf("trades").xmap(TypeAwareTradeOfferFactory::new, TypeAwareTradeOfferFactory::tradeOffers);
 
     @Override
@@ -28,7 +29,7 @@ public record TypeAwareTradeOfferFactory(Map<VillagerType, TradeOffers.Factory> 
     @Override
     public TradeOffer create(Entity entity, Random random) {
         if (entity instanceof VillagerDataContainer villager) {
-            return this.tradeOffers.get(villager.getVillagerData().getType()).create(entity, random);
+            return this.tradeOffers.get(villager.getVillagerData().type().getKey().get()).create(entity, random);
         }
         return null;
     }

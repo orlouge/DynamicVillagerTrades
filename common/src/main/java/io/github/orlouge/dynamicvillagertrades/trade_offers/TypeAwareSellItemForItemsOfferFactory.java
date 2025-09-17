@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.orlouge.dynamicvillagertrades.api.CodecHelper;
 import io.github.orlouge.dynamicvillagertrades.api.SerializableTradeOfferFactory;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.village.TradedItem;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,13 +30,13 @@ public class TypeAwareSellItemForItemsOfferFactory implements SerializableTradeO
             Codec.INT.optionalFieldOf("experience", 2).forGetter(factory -> factory.experience)
     ).apply(instance, TypeAwareSellItemForItemsOfferFactory::new));
 
-    public final Map<VillagerType, TradedItem> buyMap1;
-    public final Map<VillagerType, TradedItem> buyMap2;
-    public final Map<VillagerType, ItemStack> sellMap;
+    public final Map<RegistryKey<VillagerType>, TradedItem> buyMap1;
+    public final Map<RegistryKey<VillagerType>, TradedItem> buyMap2;
+    public final Map<RegistryKey<VillagerType>, ItemStack> sellMap;
     public final int maxUses;
     public final int experience;
 
-    public TypeAwareSellItemForItemsOfferFactory(Map<VillagerType, TradedItem> buyMap1, Optional<Map<VillagerType, TradedItem>> buyMap2, Map<VillagerType, ItemStack> sellMap, int maxUses, int experience) {
+    public TypeAwareSellItemForItemsOfferFactory(Map<RegistryKey<VillagerType>, TradedItem> buyMap1, Optional<Map<RegistryKey<VillagerType>, TradedItem>> buyMap2, Map<RegistryKey<VillagerType>, ItemStack> sellMap, int maxUses, int experience) {
         Registries.VILLAGER_TYPE.stream().filter((villagerType) -> !buyMap1.containsKey(villagerType) || (buyMap2.isPresent() && !buyMap2.get().containsKey(villagerType)) || !sellMap.containsKey(villagerType)).findAny().ifPresent((villagerType) -> {
             throw new IllegalStateException("Missing trade for villager type: " + Registries.VILLAGER_TYPE.getId(villagerType));
         });
@@ -50,9 +51,9 @@ public class TypeAwareSellItemForItemsOfferFactory implements SerializableTradeO
     @Override
     public TradeOffer create(Entity entity, Random random) {
         if (entity instanceof VillagerDataContainer) {
-            TradedItem buy1 = this.buyMap1.get(((VillagerDataContainer)entity).getVillagerData().getType());
-            Optional<TradedItem> buy2 = this.buyMap2 != null ? Optional.ofNullable(this.buyMap2.get(((VillagerDataContainer) entity).getVillagerData().getType())) : Optional.empty();
-            ItemStack sell = this.sellMap.get(((VillagerDataContainer)entity).getVillagerData().getType()).copy();
+            TradedItem buy1 = this.buyMap1.get(((VillagerDataContainer)entity).getVillagerData().type().value());
+            Optional<TradedItem> buy2 = this.buyMap2 != null ? Optional.ofNullable(this.buyMap2.get(((VillagerDataContainer) entity).getVillagerData().type().value())) : Optional.empty();
+            ItemStack sell = this.sellMap.get(((VillagerDataContainer)entity).getVillagerData().type().value()).copy();
             return new TradeOffer(buy1, buy2, sell, this.maxUses, this.experience, 0.05F);
         } else {
             return null;

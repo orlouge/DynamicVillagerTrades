@@ -17,6 +17,7 @@
     "TradeOffersAccessor$SellPotionHoldingItemFactoryAccessor",
     "TradeOffersAccessor$SellSuspiciousStewFactoryAccessor",
     "TradeOffersAccessor$TypeAwareBuyForOneEmeraldFactoryAccessor",
+    "TradeOffersAccessor$TypedWrapperFactoryAccessor",
     "TradeOffersFactoryMixin",
     "VillagerEntityMixin",
     "ZombieVillagerEntityMixin"

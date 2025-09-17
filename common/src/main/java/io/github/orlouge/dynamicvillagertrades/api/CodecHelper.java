@@ -6,6 +6,8 @@ import com.mojang.serialization.Codec;
 
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.util.dynamic.Codecs;
 import net.minecraft.village.VillagerType;
 
@@ -24,7 +26,7 @@ public class CodecHelper {
      * Create a codec for a villager type -> element map, also allows the 'default' key to use for undefined villager types.
      * @param elementCodec a codec for the element of the map
      */
-    public static <T> Codec<Map<VillagerType, T>> villagerTypeMap(Codec<T> elementCodec) {
-        return DefaultMapCodec.of(Registries.VILLAGER_TYPE.getCodec(), elementCodec, Registries.VILLAGER_TYPE);
+    public static <T> Codec<Map<RegistryKey<VillagerType>, T>> villagerTypeMap(Codec<T> elementCodec) {
+        return DefaultMapCodec.of(RegistryKey.createCodec(RegistryKeys.VILLAGER_TYPE), elementCodec, Registries.VILLAGER_TYPE);
     }
 }

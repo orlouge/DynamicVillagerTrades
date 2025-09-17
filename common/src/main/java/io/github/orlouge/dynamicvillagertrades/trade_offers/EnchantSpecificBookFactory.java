@@ -6,10 +6,10 @@ import io.github.orlouge.dynamicvillagertrades.api.SerializableTradeOfferFactory
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.enchantment.EnchantmentLevelEntry;
 import net.minecraft.entity.Entity;
-import net.minecraft.item.EnchantedBookItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.DynamicRegistryManager;
@@ -53,14 +53,14 @@ public class EnchantSpecificBookFactory implements SerializableTradeOfferFactory
     @Override
     public TradeOffer create(Entity entity, Random random) {
         DynamicRegistryManager dynamicRegistryManager = entity.getWorld().getRegistryManager();
-        Registry<Enchantment> enchantmentRegistry = dynamicRegistryManager.get(RegistryKeys.ENCHANTMENT);
+        Registry<Enchantment> enchantmentRegistry = dynamicRegistryManager.getOrThrow(RegistryKeys.ENCHANTMENT);
         Optional<RegistryEntry.Reference<Enchantment>> enchantment = enchantmentRegistry.getEntry(this.type);
         if (enchantment.isEmpty()) {
             throw new IllegalStateException("Enchantment " + this.type + " does not exist.");
         }
-        ItemStack itemStack = EnchantedBookItem.forEnchantment(new EnchantmentLevelEntry(enchantment.get(), this.level));
+        ItemStack itemStack = EnchantmentHelper.getEnchantedBookWith(new EnchantmentLevelEntry(enchantment.get(), this.level));
         if (DynamicVillagerTradesMod.ENCHANT_REPAIR_COMPAT) {
-            itemStack.addEnchantment(enchantmentRegistry.getEntry(Enchantments.VANISHING_CURSE).get(), 1);
+            itemStack.addEnchantment(enchantmentRegistry.getOrThrow(Enchantments.VANISHING_CURSE), 1);
         }
         int j = 2 + random.nextInt(5 + this.level * 10) + 3 * this.level;
         if (enchantment.get().isIn(EnchantmentTags.DOUBLE_TRADE_PRICE)) {

@@ -32,6 +32,11 @@ public class VanillaTradeOfferFactories {
             Codec.INT.optionalFieldOf("experience", 2).forGetter(factory -> ((TradeOffersAccessor.BuyItemFactoryAccessor) factory).getExperience())
     ).apply(instance, TradeOffers.BuyItemFactory::new));
 
+    public static final MapCodec<TradeOffers.TypedWrapperFactory> TYPED_WRAPPED_FACTORY = RecordCodecBuilder.mapCodec(instance -> instance.group(
+        Codec.unboundedMap(RegistryKey.createCodec(RegistryKeys.VILLAGER_TYPE), TradeOfferFactoryType.CODEC).fieldOf("choices").forGetter(
+            factory -> ((TradeOffersAccessor.TypedWrapperFactoryAccessor) (Object) factory).getTypeToFactory())
+    ).apply(instance, TradeOffers.TypedWrapperFactory::new));
+
     public static final MapCodec<TradeOffers.SellItemFactory> SELL_ITEM = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Registries.ITEM.getCodec().fieldOf("item").forGetter(factory -> ((TradeOffersAccessor.SellItemFactoryAccessor) factory).getSell().getItem()),
         Codec.INT.optionalFieldOf("price", 1).forGetter(factory -> ((TradeOffersAccessor.SellItemFactoryAccessor) factory).getPrice()),
@@ -112,6 +117,9 @@ public class VanillaTradeOfferFactories {
     public static Supplier<TradeOfferFactoryType<?>> getVanillaFactoryCodec(TradeOffers.Factory factory) {
         if (factory instanceof TradeOffers.BuyItemFactory) {
             return TradeOfferFactoryType.BUY_FOR_ONE_EMERALD::get;
+        }
+        if (factory instanceof TradeOffers.TypedWrapperFactory) {
+            return TradeOfferFactoryType.TYPED_WRAPPER_FACTORY::get;
         }
         if (factory instanceof TradeOffers.SellItemFactory) {
             return TradeOfferFactoryType.SELL_ITEM::get;

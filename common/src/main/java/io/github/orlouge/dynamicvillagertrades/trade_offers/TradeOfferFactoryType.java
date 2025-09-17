@@ -6,16 +6,15 @@ import com.mojang.serialization.MapCodec;
 import io.github.orlouge.dynamicvillagertrades.DynamicVillagerTradesMod;
 import io.github.orlouge.dynamicvillagertrades.PlatformHelper;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.dynamic.Codecs;
 import net.minecraft.village.TradeOffers;
 
-import java.util.Map;
 import java.util.function.Supplier;
 
 public interface TradeOfferFactoryType<P extends TradeOffers.Factory> {
     PlatformHelper.RegistryHelper<TradeOfferFactoryType<?>> TRADE_OFFER_FACTORY_REGISTRY = PlatformHelper.getTradeOfferRegistry();
     Codec<TradeOffers.Factory> CODEC = Codec.lazyInitialized(() -> TRADE_OFFER_FACTORY_REGISTRY.getCodec().get().dispatch("type", factory -> ((TradeOfferFactoryTypeHolder) factory).getType().get(), TradeOfferFactoryType::codec));
     Supplier<TradeOfferFactoryType<TradeOffers.BuyItemFactory>> BUY_FOR_ONE_EMERALD = register(Identifier.ofVanilla("buy_for_one_emerald"), VanillaTradeOfferFactories.BUY_FOR_ONE_EMERALD);
+    Supplier<TradeOfferFactoryType<TradeOffers.TypedWrapperFactory>> TYPED_WRAPPER_FACTORY = register(Identifier.ofVanilla("typed_wrapper"), VanillaTradeOfferFactories.TYPED_WRAPPED_FACTORY);
     Supplier<TradeOfferFactoryType<TradeOffers.SellItemFactory>> SELL_ITEM = register(Identifier.ofVanilla("sell_item"), VanillaTradeOfferFactories.SELL_ITEM);
     Supplier<TradeOfferFactoryType<TradeOffers.SellSuspiciousStewFactory>> SELL_SUSPICIOUS_STEW = register(Identifier.ofVanilla("sell_suspicious_stew"), VanillaTradeOfferFactories.SELL_SUSPICIOUS_STEW);
     Supplier<TradeOfferFactoryType<TradeOffers.ProcessItemFactory>> PROCESS_ITEM = register(Identifier.ofVanilla("process_item"), VanillaTradeOfferFactories.PROCESS_ITEM);

@@ -9,9 +9,9 @@ import net.minecraft.entity.effect.StatusEffectCategory;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.item.ArrowItem;
 import net.minecraft.potion.Potion;
-import net.minecraft.recipe.BrewingRecipeRegistry;
 import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.village.TradeOffers;
 import net.minecraft.village.VillagerProfession;
@@ -26,8 +26,8 @@ public class FletcherGenerator extends VanillaLikeGenerator
     }
 
     @Override
-    protected boolean professionFilter(String profession) {
-        return profession.equals(VillagerProfession.FLETCHER.id());
+    protected boolean professionFilter(RegistryKey<VillagerProfession> profession) {
+        return profession.equals(VillagerProfession.FLETCHER);
     }
 
     @Override

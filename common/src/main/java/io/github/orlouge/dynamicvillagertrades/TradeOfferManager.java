@@ -13,7 +13,11 @@ import io.github.orlouge.dynamicvillagertrades.trade_offers.generators.Generator
 import net.minecraft.entity.EntityType;
 import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.resource.JsonDataLoader;
+import net.minecraft.resource.ResourceFinder;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.StringIdentifiable;
@@ -21,30 +25,28 @@ import net.minecraft.util.profiler.Profiler;
 import net.minecraft.village.VillagerProfession;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 
-public class TradeOfferManager extends JsonDataLoader {
+public class TradeOfferManager extends JsonDataLoader<TradeOfferManager.VillagerTrades> {
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     public static final Identifier WANDERING_TRADER_PROFESSION_ID = Registries.ENTITY_TYPE.getId(EntityType.WANDERING_TRADER);
     public static final Identifier ID = DynamicVillagerTradesMod.id("trade_offers");
 
-    private Map<Identifier, List<VillagerTrades>> loadedTrades = Map.of();
-    private final Map<Identifier, Map<String, TradeGroup>> tradeGroups = new HashMap<>();
+    private Map<RegistryKey<VillagerProfession>, List<VillagerTrades>> loadedTrades = Map.of();
+    private final Map<RegistryKey<VillagerProfession>, Map<String, TradeGroup>> tradeGroups = new HashMap<>();
 
     public TradeOfferManager() {
-        super(GSON, ID.getPath());
+        super(VillagerTrades.CODEC, ResourceFinder.json(ID.getPath()));
     }
 
     @Override
-    protected void apply(Map<Identifier, JsonElement> prepared, ResourceManager manager, Profiler profiler) {
-        Map<Identifier, List<VillagerTrades>> builderMap = new HashMap<>();
+    protected void apply(Map<Identifier, VillagerTrades> prepared, ResourceManager manager, Profiler profiler) {
+        Map<RegistryKey<VillagerProfession>, List<VillagerTrades>> builderMap = new HashMap<>();
 
-        manager.findResources(ID.getPath(), id -> id.getPath().endsWith(".json")).forEach((id, res) -> {
-            Identifier identifier = Identifier.of(id.getNamespace(), id.getPath().substring(ID.getPath().length() + 1, id.getPath().length() - 5));
-            JsonElement jsonElement = prepared.get(identifier);
-            if (jsonElement != null) {
-                VillagerTrades trades = VillagerTrades.CODEC.decode(JsonOps.INSTANCE, jsonElement).getOrThrow().getFirst();
+        //manager.findResources(ID.getPath(), id -> id.getPath().endsWith(".json")).forEach((id, res) -> {
+        //    Identifier identifier = Identifier.of(id.getNamespace(), id.getPath().substring(ID.getPath().length() + 1, id.getPath().length() - 5));
+        //    VillagerTrades trades = prepared.get(identifier);
+        prepared.forEach((identifier, trades) -> {
+            if (trades != null) {
                 builderMap.computeIfAbsent(trades.profession, k -> new LinkedList<>()).add(trades);
             }
         });
@@ -53,15 +55,14 @@ public class TradeOfferManager extends JsonDataLoader {
         Generator.resetAll();
     }
 
-    public Optional<Map<String, TradeGroup>> getVillagerOffers(VillagerProfession profession, DynamicRegistryManager registryManager) {
-        return Optional.ofNullable(tradeGroups.get(Registries.VILLAGER_PROFESSION.getId(profession))).or(() -> generateTradeGroups(profession, registryManager));
+    public Optional<Map<String, TradeGroup>> getVillagerOffers(RegistryEntry<VillagerProfession> profession, DynamicRegistryManager registryManager) {
+        return Optional.ofNullable(tradeGroups.get(profession.getKey().get())).or(() -> generateTradeGroups(profession, registryManager));
     }
 
-    private Optional<Map<String, TradeGroup>> generateTradeGroups(VillagerProfession profession, DynamicRegistryManager registryManager) {
+    private Optional<Map<String, TradeGroup>> generateTradeGroups(RegistryEntry<VillagerProfession> profession, DynamicRegistryManager registryManager) {
         Objects.requireNonNull(registryManager);
-        Identifier professionId = Registries.VILLAGER_PROFESSION.getId(profession);
         Map<String, TradeGroup> generated = Generator.generateAll(profession, registryManager).orElse(new TreeMap<>());
-        for (VillagerTrades trades : loadedTrades.getOrDefault(professionId, Collections.emptyList())) {
+        for (VillagerTrades trades : loadedTrades.getOrDefault(profession.getKey().get(), Collections.emptyList())) {
             if (trades.replace) {
                 generated = new TreeMap<>();
             }
@@ -70,7 +71,7 @@ public class TradeOfferManager extends JsonDataLoader {
                 generated.putIfAbsent(entry.getKey(), entry.getValue());
             }
         }
-        tradeGroups.put(professionId, generated);
+        tradeGroups.put(profession.getKey().get(), generated);
         return Optional.of(generated);
     }
 
@@ -111,12 +112,12 @@ public class TradeOfferManager extends JsonDataLoader {
         }
     }
 
-    public record VillagerTrades(Identifier profession, boolean replace, Map<String, TradeGroup> offers) {
-        public static final Codec<VillagerTrades> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                Identifier.CODEC.fieldOf("profession").forGetter(VillagerTrades::profession),
+    public record VillagerTrades(RegistryKey<VillagerProfession> profession, boolean replace, Map<String, TradeGroup> offers) {
+        public static final Codec<VillagerTrades> CODEC = Codec.lazyInitialized(() -> RecordCodecBuilder.create(instance -> instance.group(
+                RegistryKey.createCodec(RegistryKeys.VILLAGER_PROFESSION).fieldOf("profession").forGetter(VillagerTrades::profession),
                 Codec.BOOL.optionalFieldOf("replace", false).forGetter(VillagerTrades::replace),
                 Codec.unboundedMap(Codec.STRING, TradeGroup.CODEC).fieldOf("offers").forGetter(VillagerTrades::offers)
-        ).apply(instance, VillagerTrades::new));
+        ).apply(instance, VillagerTrades::new)));
     }
 
 }

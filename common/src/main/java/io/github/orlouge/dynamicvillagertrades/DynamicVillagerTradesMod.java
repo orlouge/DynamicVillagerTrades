@@ -92,11 +92,10 @@ public class DynamicVillagerTradesMod {
             zip.closeEntry();
             Registries.VILLAGER_PROFESSION.getEntrySet().forEach(professionEntry -> {
                 Identifier professionId = professionEntry.getKey().getValue();
-                VillagerProfession profession = professionEntry.getValue();
-                Optional<Map<String, TradeGroup>> tradeGroups = TRADE_OFFER_MANAGER.getVillagerOffers(profession, registryManager);
+                Optional<Map<String, TradeGroup>> tradeGroups = TRADE_OFFER_MANAGER.getVillagerOffers(registryManager.getEntryOrThrow(professionEntry.getKey()), registryManager);
                 if (tradeGroups.isPresent()) {
                     try {
-                        TradeOfferManager.VillagerTrades trades = new TradeOfferManager.VillagerTrades(professionId, true, tradeGroups.get());
+                        TradeOfferManager.VillagerTrades trades = new TradeOfferManager.VillagerTrades(professionEntry.getKey(), true, tradeGroups.get());
                         byte[] json = TradeOfferManager.GSON.toJson(TradeOfferManager.VillagerTrades.CODEC.encodeStart(JsonOps.INSTANCE, trades).getOrThrow()).getBytes();
                         zip.putNextEntry(new ZipEntry("data/" + MOD_ID + "/" + TradeOfferManager.ID.getPath() + "/" + professionId.getPath() + ".json"));
                         zip.write(json, 0, json.length);

@@ -3,6 +3,7 @@ package io.github.orlouge.dynamicvillagertrades.trade_offers.generators;
 import net.minecraft.block.enums.NoteBlockInstrument;
 import net.minecraft.item.*;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.village.TradeOffers;
 import net.minecraft.village.VillagerProfession;
 
@@ -12,8 +13,8 @@ import java.util.Optional;
 
 public class MasonGenerator extends OneByOneVanillaLikeGenerator {
     @Override
-    protected boolean professionFilter(String profession) {
-        return profession.equals(VillagerProfession.MASON.id());
+    protected boolean professionFilter(RegistryKey<VillagerProfession> profession) {
+        return profession.equals(VillagerProfession.MASON);
     }
 
     @Override
@@ -35,17 +36,39 @@ public class MasonGenerator extends OneByOneVanillaLikeGenerator {
 
     private static String stoneModifier(Item item) {
         String s[] = Registries.ITEM.getId(item).getPath().split("_");
-        for (int i = 0; i < s.length; i++) {
-            if (s[i].equals("polished")) return "polished";
-            if (s[i].equals("chiseled")) return "chiseled";
-            if (s[i].equals("cut")) return "cut";
-            if (s[i].equals("smooth")) return "smooth";
-            if (s[i].equals("glazed")) return "glazed";
-            if (s[i].equals("bricks")) return "bricks";
-            if (s[i].equals("brick")) return "brick";
-            if (s[i].equals("tiles")) return "tiles";
-            if (s[i].equals("tile")) return "tile";
-            if (s[i].equals("pillar")) return "pillar";
+        for (String string : s) {
+            switch (string) {
+                case "polished" -> {
+                    return "polished";
+                }
+                case "chiseled" -> {
+                    return "chiseled";
+                }
+                case "cut" -> {
+                    return "cut";
+                }
+                case "smooth" -> {
+                    return "smooth";
+                }
+                case "glazed" -> {
+                    return "glazed";
+                }
+                case "bricks" -> {
+                    return "bricks";
+                }
+                case "brick" -> {
+                    return "brick";
+                }
+                case "tiles" -> {
+                    return "tiles";
+                }
+                case "tile" -> {
+                    return "tile";
+                }
+                case "pillar" -> {
+                    return "pillar";
+                }
+            }
         }
         return "raw";
     }
